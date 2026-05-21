@@ -3547,7 +3547,18 @@ import { router } from 'expo-router';
         <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0 gap-3">
           {/* LEFT: project info */}
           <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-            <h1 className="font-bold text-gray-900 text-sm flex-shrink-0">Builder</h1>
+            <a href="/" className="flex items-center gap-1.5 flex-shrink-0 group">
+              <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+                <defs><linearGradient id="blg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#6366f1"/><stop offset="100%" stopColor="#4338ca"/></linearGradient></defs>
+                <rect width="40" height="40" rx="10" fill="url(#blg)"/>
+                <rect x="7" y="7" width="26" height="5" rx="2.5" fill="white" opacity="0.95"/>
+                <rect x="7" y="14" width="26" height="8" rx="2" fill="white" opacity="0.75"/>
+                <rect x="7" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
+                <rect x="16.5" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
+                <rect x="26" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
+              </svg>
+              <span className="font-bold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">Bloxer</span>
+            </a>
             <span className="text-gray-300 flex-shrink-0">·</span>
             <span className="text-sm text-gray-600 font-medium flex-shrink-0 cursor-pointer hover:text-indigo-600" onDoubleClick={() => setRenamingPageId(activePage.id)}>
               {renamingPageId === activePage.id ? (<input autoFocus defaultValue={activePage.name} onBlur={e => renamePage(activePage.id, e.target.value)} onKeyDown={e => { if (e.key === "Enter") renamePage(activePage.id, e.currentTarget.value); if (e.key === "Escape") setRenamingPageId(null); }} className="border-b border-indigo-400 outline-none bg-transparent text-sm font-medium w-28" />) : activePage.name}

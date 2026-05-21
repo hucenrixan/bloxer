@@ -11,10 +11,19 @@ import { TEMPLATES, type Template, getTemplates } from "@/lib/templates";
 // ── Logo ──────────────────────────────────────────────────────────────────────
 function BloxerLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <rect x="15" y="2"  width="15" height="15" rx="4" fill="#c4b5fd" />
-      <rect x="8"  y="8"  width="15" height="15" rx="4" fill="#818cf8" />
-      <rect x="2"  y="15" width="15" height="15" rx="4" fill="#6366f1" />
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#6366f1"/>
+          <stop offset="100%" stopColor="#4338ca"/>
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="10" fill="url(#lg)"/>
+      <rect x="7" y="7" width="26" height="5" rx="2.5" fill="white" opacity="0.95"/>
+      <rect x="7" y="14" width="26" height="8" rx="2" fill="white" opacity="0.75"/>
+      <rect x="7" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
+      <rect x="16.5" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
+      <rect x="26" y="24" width="7" height="9" rx="2" fill="white" opacity="0.9"/>
     </svg>
   );
 }

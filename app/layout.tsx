@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Bloxer",
   description: "Visual layout builder — export to Next.js and React Native",
+  icons: { icon: "/logo.svg", shortcut: "/logo.svg" },
 };
 
 export default function RootLayout({
