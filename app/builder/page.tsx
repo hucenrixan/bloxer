@@ -1024,6 +1024,8 @@ export default function Builder() {
   const sectionContentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const artboardRef = useRef<HTMLDivElement | null>(null);
   const canvasScrollRef = useRef<HTMLDivElement | null>(null);
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const hoveredSectionIdxRef = useRef<number | null>(null);
   const blockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const blockWrapperRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const zoomRef = useRef(75);
@@ -1106,7 +1108,7 @@ export default function Builder() {
   useEffect(() => { snapRef.current = snapGrid; }, [snapGrid]);
   // Auto fit-to-screen on mount and canvas mode change
   useEffect(() => {
-    const container = canvasScrollRef.current;
+    const container = canvasContainerRef.current;
     if (!container) return;
     function doFit() {
       if (!container) return;
@@ -1328,6 +1330,13 @@ export default function Builder() {
         e.preventDefault(); const delta = e.shiftKey ? 10 : 1;
         setEditingBlocks(prev => prev?.map(b => !selectedBlockIds.has(b.id) ? b : { ...b, x: e.key === "ArrowLeft" ? Math.max(0, b.x - delta) : e.key === "ArrowRight" ? b.x + delta : b.x, y: e.key === "ArrowUp" ? Math.max(0, b.y - delta) : e.key === "ArrowDown" ? b.y + delta : b.y }) ?? prev);
       }
+      // Section reorder with ArrowUp/Down when hovering a section (not editing blocks)
+      if (!editingUid && hoveredSectionIdxRef.current !== null && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        const idx = hoveredSectionIdxRef.current;
+        if (e.key === "ArrowUp") moveUp(idx);
+        if (e.key === "ArrowDown") moveDown(idx);
+      }
       // Tool shortcuts
       if (!inEdit && !e.metaKey && !e.ctrlKey) {
         if (e.key === "v" || e.key === "V") setActiveTool("select");
@@ -1367,6 +1376,8 @@ export default function Builder() {
   function onDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); dragOverIndex.current = idx; setDragOverIdx(idx); }
   function onDrop() { const from = dragIndex.current, to = dragOverIndex.current; setDragOverIdx(null); if (from === null || to === null || from === to) return; setCanvas(prev => { const n=[...prev]; const [item]=n.splice(from,1); n.splice(to,0,item); return n; }); dragIndex.current = null; dragOverIndex.current = null; }
   const [styleMenuUid, setStyleMenuUid] = useState<string | null>(null);
+  const [hoveredSectionIdx, setHoveredSectionIdx] = useState<number | null>(null);
+  useEffect(() => { hoveredSectionIdxRef.current = hoveredSectionIdx; }, [hoveredSectionIdx]);
   function setSectionBg(uid: string, color: string) { setPages(pages.map(p => p.id !== activePageId ? p : { ...p, sections: p.sections.map(s => s.uid === uid ? { ...s, sectionBg: color || undefined } : s) })); }
   function commitSectionBg(uid: string, color: string) { commitPages(pages.map(p => p.id !== activePageId ? p : { ...p, sections: p.sections.map(s => s.uid === uid ? { ...s, sectionBg: color || undefined } : s) })); }
   function commitSectionGradient(uid: string, gradient: string | undefined) { commitPages(pages.map(p => p.id !== activePageId ? p : { ...p, sections: p.sections.map(s => s.uid === uid ? { ...s, sectionGradient: gradient, sectionBg: gradient ? undefined : s.sectionBg } : s) })); }
@@ -1568,9 +1579,14 @@ export default function Builder() {
   function renamePage(id: string, name: string) { if (name.trim()) commitPages(pages.map(p => p.id === id ? { ...p, name: name.trim() } : p)); setRenamingPageId(null); }
 
   // ── Export helpers
-  function buildHtmlDoc(title: string, body: string) { return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width,initial-scale=1.0" />\n  <title>${title}</title>\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body>\n${body}\n</body>\n</html>`; }
+  function buildHtmlDoc(title: string, body: string, meta?: { description?: string; ogImage?: string }) {
+    const desc = meta?.description || "";
+    const og = meta?.ogImage || "";
+    const font = brandFont ? `\n  <link rel="preconnect" href="https://fonts.googleapis.com" />\n  <link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(brandFont)}:wght@400;700&display=swap" rel="stylesheet" />\n  <style>body{font-family:'${brandFont}',system-ui,sans-serif;}</style>` : "";
+    return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width,initial-scale=1.0" />\n  <title>${title}</title>\n  <meta property="og:title" content="${title}" />${desc ? `\n  <meta name="description" content="${desc}" />\n  <meta property="og:description" content="${desc}" />` : ""}${og ? `\n  <meta property="og:image" content="${og}" />` : ""}${font}\n  <script src="https://cdn.tailwindcss.com"><\/script>\n</head>\n<body>\n${body}\n</body>\n</html>`;
+  }
   function getCleanArtboard() { const a = artboardRef.current; if (!a) return null; const c = a.cloneNode(true) as HTMLElement; c.querySelectorAll(".builder-control").forEach(el => el.remove()); c.querySelectorAll("[data-blk]").forEach(el => el.removeAttribute("data-blk")); c.style.zoom = ""; c.style.width = ""; c.style.boxShadow = ""; c.style.minHeight = ""; return c; }
-  function downloadHTML() { const c = getCleanArtboard(); if (!c) return; const blob = new Blob([buildHtmlDoc(activePage.name, c.innerHTML)], { type: "text/html" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${activePage.name.toLowerCase().replace(/\s+/g,"-")}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); setCodeState("done"); setTimeout(() => setCodeState("idle"), 2000); }
+  function downloadHTML() { const c = getCleanArtboard(); if (!c) return; const blob = new Blob([buildHtmlDoc(activePage.name, c.innerHTML, activePage.meta)], { type: "text/html" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${activePage.name.toLowerCase().replace(/\s+/g,"-")}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); setCodeState("done"); setTimeout(() => setCodeState("idle"), 2000); }
 
   function blockToRNStyle(block: Block): string {
     const lines: string[] = [];
@@ -2960,7 +2976,7 @@ import { router } from 'expo-router';
     setRnProjectState("done"); setTimeout(() => setRnProjectState("idle"), 3000);
   }
 
-  function previewPage() { const c = getCleanArtboard(); if (!c) return; const blob = new Blob([buildHtmlDoc(activePage.name, c.innerHTML)], { type: "text/html" }); const url = URL.createObjectURL(blob); window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 10000); }
+  function previewPage() { const c = getCleanArtboard(); if (!c) return; const blob = new Blob([buildHtmlDoc(activePage.name, c.innerHTML, activePage.meta)], { type: "text/html" }); const url = URL.createObjectURL(blob); window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 10000); }
   function exportProject() { const blob = new Blob([JSON.stringify(serialize(pages), null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "builder-project.json"; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
   function importProject(e: React.ChangeEvent<HTMLInputElement>) { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = ev => { try { const d = deserialize(JSON.parse(ev.target?.result as string)); if (d.length) { commitPages(d); setActivePageId(d[0].id); setEditingUid(null); setEditingBlocks(null); } } catch { alert("Could not read project file."); } }; r.readAsText(f); e.target.value = ""; }
 
@@ -2978,9 +2994,9 @@ import { router } from 'expo-router';
   function zoomIn() { setZoom(z => Math.min(z + 10, 200)); }
   function zoomOut() { setZoom(z => Math.max(z - 10, 20)); }
   function fitZoom() {
-    const container = canvasScrollRef.current;
+    const container = canvasContainerRef.current;
     if (!container) { setZoom(FIT_ZOOM[canvasMode]); return; }
-    const available = container.clientWidth - 96; // 48px padding each side
+    const available = container.clientWidth - 96;
     const computed = Math.floor((available / CANVAS_WIDTHS[canvasMode]) * 100);
     setZoom(Math.max(20, Math.min(200, computed)));
   }
@@ -3804,7 +3820,7 @@ import { router } from 'expo-router';
         {!pagesOverview && <div className="flex flex-1 overflow-hidden">
 
           {/* Canvas */}
-          <div className="flex-1 relative overflow-hidden" onClick={() => { if (editingUid) setSelectedBlockIds(new Set()); }}>
+          <div ref={canvasContainerRef} className="flex-1 relative overflow-hidden" onClick={() => { if (editingUid) setSelectedBlockIds(new Set()); }}>
             {preview && (
               <div className="absolute inset-0 z-20 flex flex-col" style={{ background:"#1e1e2e" }} onMouseEnter={() => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); }} onMouseLeave={hidePreview}>
                 <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
@@ -3915,6 +3931,8 @@ import { router } from 'expo-router';
                       return (
                         <div key={item.uid}
                           ref={el => { if (el) sectionRefs.current.set(item.uid, el); else sectionRefs.current.delete(item.uid); }}
+                          onMouseEnter={() => setHoveredSectionIdx(idx)}
+                          onMouseLeave={() => setHoveredSectionIdx(null)}
                           onDragOver={!isEditing ? e => onDragOver(e, idx) : undefined}
                           onDragLeave={!isEditing ? () => setDragOverIdx(null) : undefined}
                           onDrop={!isEditing ? onDrop : undefined}
@@ -3973,8 +3991,11 @@ import { router } from 'expo-router';
                                 <span className="bg-indigo-600 text-white text-xs font-medium px-2 py-1 rounded-lg shadow-sm">{item.name}{item.html ? " · edited" : ""}</span>
                               </div>
                               <div className="builder-control absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span draggable onDragStart={() => onDragStart(idx)} onDragEnd={() => { dragIndex.current=null; dragOverIndex.current=null; }} className="bg-white/90 backdrop-blur-sm text-xs text-gray-500 border border-gray-200 px-2 py-1 rounded-lg shadow-sm cursor-grab select-none">⠿ drag</span>
+                                <span draggable onDragStart={() => onDragStart(idx)} onDragEnd={() => { dragIndex.current=null; dragOverIndex.current=null; }} className="bg-white/90 backdrop-blur-sm text-xs text-gray-500 border border-gray-200 px-2 py-1 rounded-lg shadow-sm cursor-grab select-none">⠿</span>
+                                <button onClick={() => moveUp(idx)} disabled={idx === 0} title="Move up (↑)" className="bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-25 w-7 h-7 rounded-lg shadow-sm flex items-center justify-center text-sm">↑</button>
+                                <button onClick={() => moveDown(idx)} disabled={idx >= canvas.length - 1} title="Move down (↓)" className="bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-25 w-7 h-7 rounded-lg shadow-sm flex items-center justify-center text-sm">↓</button>
                                 <button onClick={() => startEdit(item.uid)} className="bg-white/90 backdrop-blur-sm border border-indigo-200 text-indigo-600 hover:bg-indigo-50 text-xs font-semibold px-2 py-1 rounded-lg shadow-sm">✏️ Edit</button>
+                                <button onClick={() => duplicateSection(item.uid)} title="Duplicate section" className="bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs font-semibold px-2 py-1 rounded-lg shadow-sm">⎘ Dup</button>
                                 <div className="relative">
                                   <button onClick={() => setStyleMenuUid(styleMenuUid === item.uid ? null : item.uid)} className={`bg-white/90 backdrop-blur-sm border text-xs font-semibold px-2 py-1 rounded-lg shadow-sm transition-colors ${styleMenuUid === item.uid ? "border-violet-400 text-violet-600 bg-violet-50" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>🎨 Style</button>
                                   {styleMenuUid === item.uid && (
