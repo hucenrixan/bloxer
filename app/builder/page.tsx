@@ -3563,12 +3563,11 @@ import { router } from 'expo-router';
       {/* ── MAIN ── */}
       <main className="flex-1 flex flex-col overflow-hidden">
 
-        {/* ── Top bar ── */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between flex-shrink-0 gap-3">
-          {/* LEFT: project info */}
-          <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
+        {/* ── Top bar — ROW 1: identity + project actions ── */}
+        <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center justify-between flex-shrink-0 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
             <a href="/" className="flex items-center gap-1.5 flex-shrink-0 group">
-              <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+              <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
                 <defs><linearGradient id="blg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#6366f1"/><stop offset="100%" stopColor="#4338ca"/></linearGradient></defs>
                 <rect width="40" height="40" rx="10" fill="url(#blg)"/>
                 <rect x="7" y="7" width="26" height="5" rx="2.5" fill="white" opacity="0.95"/>
@@ -3579,52 +3578,59 @@ import { router } from 'expo-router';
               </svg>
               <span className="font-bold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">Bloxer</span>
             </a>
-            <span className="text-gray-300 flex-shrink-0">·</span>
-            <span className="text-sm text-gray-600 font-medium flex-shrink-0 cursor-pointer hover:text-indigo-600" onDoubleClick={() => setRenamingPageId(activePage.id)}>
+            <span className="text-gray-300">·</span>
+            <span className="text-sm text-gray-600 font-medium cursor-pointer hover:text-indigo-600" onDoubleClick={() => setRenamingPageId(activePage.id)}>
               {renamingPageId === activePage.id ? (<input autoFocus defaultValue={activePage.name} onBlur={e => renamePage(activePage.id, e.target.value)} onKeyDown={e => { if (e.key === "Enter") renamePage(activePage.id, e.currentTarget.value); if (e.key === "Escape") setRenamingPageId(null); }} className="border-b border-indigo-400 outline-none bg-transparent text-sm font-medium w-28" />) : activePage.name}
             </span>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">{canvas.length}s</span>
-            <span className={`text-xs flex-shrink-0 ${saveStatus === "saving" ? "text-amber-500" : "text-gray-300"}`}>{saveStatus === "saving" ? "saving…" : "✓ saved"}</span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{canvas.length}s</span>
+            <span className={`text-xs ${saveStatus === "saving" ? "text-amber-500" : "text-gray-300"}`}>{saveStatus === "saving" ? "saving…" : "✓ saved"}</span>
           </div>
-          {/* RIGHT: all tools, scrollable */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 overflow-x-auto">
-            <button onClick={undo} disabled={!canUndo} title="Undo (⌘Z)" className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-sm flex-shrink-0">↩</button>
-            <button onClick={redo} disabled={!canRedo} title="Redo (⌘Y)" className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-sm flex-shrink-0">↪</button>
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button onClick={exportProject} className="px-2.5 h-7 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50">Export</button>
+            <label className="px-2.5 h-7 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer flex items-center">Import<input type="file" accept=".json" className="hidden" onChange={importProject} /></label>
+            <button onClick={() => setRnDeviceMode(s => !s)} title="iPhone frame preview" className={`px-2 h-7 text-xs rounded-lg border transition-colors ${rnDeviceMode ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>📱 Frame</button>
+            <button onClick={() => setRoutingOpen(true)} className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Routes</button>
+            <button onClick={() => setSettingsOpen(true)} className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">⚙ Settings</button>
+            <button onClick={() => setShortcutsOpen(true)} className="px-2 h-7 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">?</button>
+            <div className="w-px h-4 bg-gray-200" />
+            <button onClick={exportWebProject} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors ${webProjectState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>{webProjectState === "done" ? "✓ Web!" : "⬇ Web"}</button>
+            <button onClick={exportRNProject} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors ${rnProjectState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>{rnProjectState === "done" ? "✓ RN!" : "⬇ RN"}</button>
+          </div>
+        </div>
+
+        {/* ── Top bar — ROW 2: canvas tools ── */}
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-1.5 flex items-center justify-between flex-shrink-0 gap-3">
+          <div className="flex items-center gap-1.5">
+            <button onClick={undo} disabled={!canUndo} title="Undo (⌘Z)" className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-sm">↩</button>
+            <button onClick={redo} disabled={!canRedo} title="Redo (⌘Y)" className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-30 text-sm">↪</button>
+            <div className="w-px h-4 bg-gray-200" />
+            <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
               {(["desktop","tablet","mobile"] as CanvasMode[]).map((m, i) => (
-                <button key={m} onClick={() => { setCanvasMode(m); }} title={`${m} (${CANVAS_WIDTHS[m]}px)`}
-                  className={`px-2 h-7 text-xs transition-colors ${canvasMode === m ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"} ${i > 0 ? "border-l border-gray-200" : ""}`}>
-                  {m === "desktop" ? "🖥" : m === "tablet" ? "⬜" : "📱"}
+                <button key={m} onClick={() => setCanvasMode(m)} title={`${m} (${CANVAS_WIDTHS[m]}px)`}
+                  className={`px-2.5 h-7 text-xs transition-colors ${canvasMode === m ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"} ${i > 0 ? "border-l border-gray-200" : ""}`}>
+                  {m === "desktop" ? "🖥 Desktop" : m === "tablet" ? "⬜ Tablet" : "📱 Mobile"}
                 </button>
               ))}
             </div>
-            <button onClick={() => setSnapGrid(s => !s)} title="Snap to grid" className={`px-2 h-7 text-xs rounded-lg border transition-colors flex-shrink-0 ${snapGrid ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>⊞ Snap</button>
-            <button onClick={() => setShowLabels(s => !s)} title="Section labels" className={`px-2 h-7 text-xs rounded-lg border transition-colors flex-shrink-0 ${showLabels ? "bg-indigo-100 text-indigo-700 border-indigo-200" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>Labels</button>
-            <button onClick={() => { setPagesOverview(s => !s); setEditingUid(null); setEditingBlocks(null); }} title="Pages overview" className={`px-2 h-7 text-xs rounded-lg border transition-colors flex-shrink-0 ${pagesOverview ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>⊞ Pages</button>
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-            <button onClick={exportProject} className="px-2.5 h-7 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 flex-shrink-0">Export</button>
-            <label className="px-2.5 h-7 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer flex items-center flex-shrink-0">Import<input type="file" accept=".json" className="hidden" onChange={importProject} /></label>
-            <button onClick={() => setRnDeviceMode(s => !s)} title="iPhone frame preview" className={`px-2 h-7 text-xs rounded-lg border transition-colors flex-shrink-0 ${rnDeviceMode ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>📱 Frame</button>
-            <button onClick={() => setCmdOpen(true)} title="Command palette (⌘K)" className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center gap-1 flex-shrink-0">⌘K</button>
-            <button onClick={() => setRoutingOpen(true)} title="Page routing" className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0">Routes</button>
-            <button onClick={() => setSettingsOpen(true)} title="Project settings" className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0">⚙ Settings</button>
-            <button onClick={() => setShortcutsOpen(true)} title="Keyboard shortcuts (?)" className="px-2 h-7 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 flex-shrink-0">?</button>
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-            <button onClick={exportWebProject} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors flex-shrink-0 ${webProjectState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>{webProjectState === "done" ? "✓ Web ready!" : "⬇ Web Project"}</button>
-            <button onClick={exportRNProject} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors flex-shrink-0 ${rnProjectState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>{rnProjectState === "done" ? "✓ RN ready!" : "⬇ RN Project"}</button>
-            <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+            <div className="w-px h-4 bg-gray-200" />
+            <button onClick={() => setSnapGrid(s => !s)} title="Snap to grid" className={`px-2 h-7 text-xs rounded-lg border transition-colors ${snapGrid ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"}`}>⊞ Snap</button>
+            <button onClick={() => setShowLabels(s => !s)} title="Section labels" className={`px-2 h-7 text-xs rounded-lg border transition-colors ${showLabels ? "bg-indigo-100 text-indigo-700 border-indigo-200" : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"}`}>Labels</button>
+            <button onClick={() => { setPagesOverview(s => !s); setEditingUid(null); setEditingBlocks(null); }} title="Pages overview" className={`px-2 h-7 text-xs rounded-lg border transition-colors ${pagesOverview ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"}`}>⊞ Pages</button>
+            <button onClick={() => setCmdOpen(true)} title="Command palette (⌘K)" className="px-2.5 h-7 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 flex items-center gap-1">⌘K</button>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {canvas.length > 0 && <>
+              <button onClick={previewPage} className="px-3 h-7 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">Preview</button>
+              <button onClick={downloadHTML} className={`px-3 h-7 text-xs font-semibold rounded-lg transition-colors ${codeState === "done" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}>{codeState === "done" ? "✓ Downloaded!" : "⬇ HTML"}</button>
+              {editingBlocks && <button onClick={exportRN} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors ${rnState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}>{rnState === "done" ? "✓ RN!" : "⬇ RN"}</button>}
+              <button onClick={() => commitPages(pages.map(p => p.id === activePageId ? { ...p, sections: [] } : p))} className="px-2.5 h-7 text-xs text-gray-500 hover:text-red-600 border border-gray-200 bg-white rounded-lg hover:border-red-200">Clear</button>
+              <div className="w-px h-4 bg-gray-200" />
+            </>}
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
               <button onClick={zoomOut} disabled={zoom <= 20} className="px-2 h-7 text-gray-600 hover:bg-gray-100 disabled:opacity-30 font-bold">−</button>
-              <button onClick={fitZoom} className="px-2 h-7 text-xs font-mono text-gray-600 hover:bg-gray-100 min-w-[44px] text-center">{zoom}%</button>
+              <button onClick={fitZoom} title="Fit to screen" className="px-2 h-7 text-xs font-mono text-gray-600 hover:bg-gray-100 min-w-[44px] text-center">{zoom}%</button>
               <button onClick={zoomIn} disabled={zoom >= 200} className="px-2 h-7 text-gray-600 hover:bg-gray-100 disabled:opacity-30 font-bold">+</button>
             </div>
-            {canvas.length > 0 && <>
-              <button onClick={previewPage} className="px-3 h-7 text-xs font-semibold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 flex-shrink-0">Preview</button>
-              <button onClick={downloadHTML} className={`px-3 h-7 text-xs font-semibold rounded-lg transition-colors flex-shrink-0 ${codeState === "done" ? "bg-emerald-100 text-emerald-700" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}>{codeState === "done" ? "✓ Downloaded!" : "⬇ HTML"}</button>
-              {editingBlocks && <button onClick={exportRN} className={`px-3 h-7 text-xs font-semibold rounded-lg border transition-colors flex-shrink-0 ${rnState === "done" ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>{rnState === "done" ? "✓ RN!" : "⬇ RN"}</button>}
-              <button onClick={() => commitPages(pages.map(p => p.id === activePageId ? { ...p, sections: [] } : p))} className="px-2.5 h-7 text-xs text-gray-500 hover:text-red-600 border border-gray-200 rounded-lg hover:border-red-200 flex-shrink-0">Clear</button>
-            </>}
           </div>
         </div>
 
