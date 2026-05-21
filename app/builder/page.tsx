@@ -1079,7 +1079,6 @@ export default function Builder() {
     const meta = listProjects().find(p => p.id === id);
     if (meta?.type === "ios" || meta?.type === "android") {
       setCanvasMode("mobile");
-      setZoom(FIT_ZOOM["mobile"]);
       setRnDeviceMode(true);
       setPlatformFilter(meta.type);
     }
@@ -1105,6 +1104,21 @@ export default function Builder() {
   }, [pages]);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { snapRef.current = snapGrid; }, [snapGrid]);
+  // Auto fit-to-screen on mount and canvas mode change
+  useEffect(() => {
+    const container = canvasScrollRef.current;
+    if (!container) return;
+    function doFit() {
+      if (!container) return;
+      const available = container.clientWidth - 96;
+      const computed = Math.floor((available / CANVAS_WIDTHS[canvasMode]) * 100);
+      setZoom(Math.max(20, Math.min(200, computed)));
+    }
+    doFit();
+    const ro = new ResizeObserver(doFit);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [canvasMode]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { stateRef.current = { editingUid, selectedBlockIds, editingBlocks }; });
   useEffect(() => { if (selBlock) { setShadowEnabled(!!selBlock.shadow); setBorderEnabled(!!selBlock.border); } }, [selBlock?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2963,7 +2977,13 @@ import { router } from 'expo-router';
   function hidePreview() { hoverTimeout.current = setTimeout(() => setPreview(null), 120); }
   function zoomIn() { setZoom(z => Math.min(z + 10, 200)); }
   function zoomOut() { setZoom(z => Math.max(z - 10, 20)); }
-  function fitZoom() { setZoom(FIT_ZOOM[canvasMode]); }
+  function fitZoom() {
+    const container = canvasScrollRef.current;
+    if (!container) { setZoom(FIT_ZOOM[canvasMode]); return; }
+    const available = container.clientWidth - 96; // 48px padding each side
+    const computed = Math.floor((available / CANVAS_WIDTHS[canvasMode]) * 100);
+    setZoom(Math.max(20, Math.min(200, computed)));
+  }
   const editingItem = canvas.find(i => i.uid === editingUid);
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -3573,7 +3593,7 @@ import { router } from 'expo-router';
             <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
             <div className="flex border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
               {(["desktop","tablet","mobile"] as CanvasMode[]).map((m, i) => (
-                <button key={m} onClick={() => { setCanvasMode(m); setZoom(FIT_ZOOM[m]); }} title={`${m} (${CANVAS_WIDTHS[m]}px)`}
+                <button key={m} onClick={() => { setCanvasMode(m); }} title={`${m} (${CANVAS_WIDTHS[m]}px)`}
                   className={`px-2 h-7 text-xs transition-colors ${canvasMode === m ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"} ${i > 0 ? "border-l border-gray-200" : ""}`}>
                   {m === "desktop" ? "🖥" : m === "tablet" ? "⬜" : "📱"}
                 </button>
@@ -4134,7 +4154,7 @@ import { router } from 'expo-router';
             )}
 
             {/* ── Floating zoom controls ── */}
-            {canvas.length > 0 && (
+            {(
               <div className="absolute bottom-4 right-4 z-30 flex items-center gap-0.5 bg-gray-900/85 backdrop-blur-md rounded-xl p-1 shadow-xl border border-white/10 pointer-events-auto">
                 <button onClick={zoomOut} disabled={zoom <= 20} title="Zoom out"
                   className="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/15 rounded-lg disabled:opacity-25 disabled:cursor-not-allowed transition-all text-[18px] font-light leading-none select-none">
