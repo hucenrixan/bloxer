@@ -9,13 +9,18 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Bloxer",
-  description: "Visual layout builder — export to Next.js and React Native",
-  icons: { icon: "/logo.svg", shortcut: "/logo.svg" },
+  description: "Visual layout builder — wireframe, sitemap, and builder",
+  icons: {
+    icon: "/icon-192.png",
+    shortcut: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Bloxer",
+    startupImage: "/apple-touch-icon.png",
   },
 };
 
