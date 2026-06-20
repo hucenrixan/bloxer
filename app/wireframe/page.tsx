@@ -66,6 +66,9 @@ function persistWire(meta:WireMeta,pages:WirePage[]):WireMeta {
 function eraseWire(id:string) { localStorage.removeItem(dataKey(id)); localStorage.setItem(IDX_KEY,JSON.stringify(listWires().filter(m=>m.id!==id))) }
 function timeAgo(iso:string) { const d=Date.now()-new Date(iso).getTime(); if(d<60000)return"just now"; if(d<3600000)return`${Math.floor(d/60000)}m ago`; if(d<86400000)return`${Math.floor(d/3600000)}h ago`; return`${Math.floor(d/86400000)}d ago` }
 
+function exportWire(p:WireMeta){ const pages=loadWire(p.id); const data={type:"bloxer-wireframe",version:1,meta:p,pages}; const blob=new Blob([JSON.stringify(data)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`${p.name}.bloxer.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000) }
+function importWire(onDone:()=>void){ const input=document.createElement("input"); input.type="file"; input.accept=".json,application/json"; input.onchange=()=>{ const file=input.files?.[0]; if(!file) return; const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(reader.result as string); if(data.type!=="bloxer-wireframe"){alert("Not a Bloxer wireframe file");return}; const newId=uid(); const newMeta:WireMeta={...data.meta,id:newId,name:data.meta?.name||file.name.replace(".bloxer.json",""),updatedAt:ts()}; persistWire(newMeta,data.pages||[]); onDone() }catch{ alert("Invalid file") } }; reader.readAsText(file) }; input.click() }
+
 // ── Canvas element visuals ─────────────────────────────────────────────────────
 function ElVisual({ el, editing, onCommit }:{ el:WireEl; editing:boolean; onCommit:(t:string)=>void }) {
   const { type, w, h, text } = el
@@ -507,10 +510,16 @@ export default function WireframePage() {
           </div>
           <h1 className="text-base font-bold text-gray-900">Wireframe Builder</h1>
         </div>
-        <button onClick={()=>setShowNew(true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          New Wireframe
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>importWire(()=>setProjects(listWires()))} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 9V2M3.5 6l3 3 3-3M1 11h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Import
+          </button>
+          <button onClick={()=>setShowNew(true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2v9M2 6.5h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            New Wireframe
+          </button>
+        </div>
       </div>
       <div className="max-w-5xl mx-auto px-6 py-8">
         {projects.length===0?(
@@ -528,6 +537,9 @@ export default function WireframePage() {
                   <svg width="120" height="80" viewBox="0 0 120 80" fill="none"><rect x="4" y="4" width="112" height="16" rx="3" fill="white" stroke="#c7d2fe" strokeWidth="1.2"/><rect x="4" y="26" width="52" height="50" rx="3" fill="white" stroke="#c7d2fe" strokeWidth="1.2"/><rect x="62" y="26" width="54" height="23" rx="3" fill="white" stroke="#c7d2fe" strokeWidth="1.2"/><rect x="62" y="53" width="54" height="23" rx="3" fill="white" stroke="#c7d2fe" strokeWidth="1.2"/></svg>
                 </div>
                 <div className="p-4"><h3 className="font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors text-sm">{p.name}</h3><p className="text-xs text-gray-400 mt-0.5">Updated {timeAgo(p.updatedAt)}</p></div>
+                <button className="absolute top-2 right-10 w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center text-gray-300 hover:text-indigo-500 transition-colors" title="Export" onClick={e=>{e.stopPropagation();exportWire(p)}}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v6M3 5.5l3 3 3-3M1 10h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
                 <button className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors" onClick={e=>{e.stopPropagation();if(confirm("Delete?")){ eraseWire(p.id); setProjects(listWires()) }}}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
                 </button>
