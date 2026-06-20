@@ -276,8 +276,9 @@ export default function WireframePage() {
 
   function openProject(id:string) {
     const m=listWires().find(x=>x.id===id); if(!m) return
-    const ps=loadWire(id)
-    setMeta(m); setPages(ps); setPageId(ps[0]?.id??""); setSelectedIds([]); setSaveStatus("saved")
+    let ps=loadWire(id)
+    if(!ps.length){ const p:WirePage={id:uid(),name:"Page 1",elements:[]}; ps=[p]; persistWire(m,ps) }
+    setMeta(m); setPages(ps); setPageId(ps[0].id); setSelectedIds([]); setSaveStatus("saved")
     setView("editor"); window.history.replaceState(null,"",`?id=${id}`)
   }
   function createProject() {
