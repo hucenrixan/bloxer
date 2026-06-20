@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 
 type NodeType = "home"|"page"|"section"|"external"|"auth"
 
-interface SiteNode { id:string; label:string; type:NodeType; url:string; parentId:string|null; order:number; notes?:string; img?:string }
+interface SiteNode { id:string; label:string; type:NodeType; url:string; parentId:string|null; order:number; notes?:string; img?:string; wireframeId?:string }
 interface SitemapMeta { id:string; name:string; createdAt:string; updatedAt:string }
 interface SiteStroke { id:string; pts:{x:number;y:number}[]; color:string; width:number }
 interface SiteEdge { id:string; from:string; to:string }
@@ -123,6 +123,7 @@ export default function SitemapPage(){
   const [liveStroke,setLiveStroke]=useState<{x:number;y:number}[]>([])
   const [drawMode,setDrawMode]=useState(false)
   const [drawColor,setDrawColor]=useState("#7c3aed")
+  const [wireframes,setWireframes]=useState<{id:string;name:string}[]>([])
   const [edges,setEdges]=useState<SiteEdge[]>([])
   const [connectMode,setConnectMode]=useState(false)
   const [connectFrom,setConnectFrom]=useState<string|null>(null)
@@ -155,7 +156,7 @@ export default function SitemapPage(){
   positionsRef.current=positions
   const selectedNode=nodes.find(n=>n.id===selectedId)??null
 
-  useEffect(()=>{ if(view==="dash") setProjects(listMaps()) },[view])
+  useEffect(()=>{ if(view==="dash") setProjects(listMaps()); try{setWireframes(JSON.parse(localStorage.getItem("lsk-wire-index")||"[]"))}catch{} },[view])
   useEffect(()=>{ const id=new URLSearchParams(window.location.search).get("id"); if(id) openProject(id) },[])
 
   const scheduleSave=useCallback((m:SitemapMeta,ns:SiteNode[],ss:SiteStroke[],es:SiteEdge[]=[])=>{ setSaveStatus("unsaved"); if(saveTimer.current)clearTimeout(saveTimer.current); saveTimer.current=setTimeout(()=>{setMeta(persistMap(m,ns,ss,es));setSaveStatus("saved")},1000) },[])
@@ -523,6 +524,11 @@ export default function SitemapPage(){
                     <button data-node="1" onClick={e=>{e.stopPropagation();addChild(n.id)}} title="Add child page"
                       style={{position:"absolute",bottom:-18,left:"50%",transform:"translateX(-50%)",width:22,height:22,borderRadius:"50%",background:"#7c3aed",border:"2.5px solid white",color:"white",fontSize:16,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 6px rgba(124,58,237,.4)"}}>+</button>
                   )}
+                  {/* Wireframe link badge */}
+                  {n.wireframeId&&<button data-node="1" title="Open wireframe" onClick={e=>{e.stopPropagation();window.location.href=`/wireframe?id=${n.wireframeId}&fromSitemap=${meta?.id}`}}
+                    style={{position:"absolute",top:-8,left:-8,width:18,height:18,borderRadius:5,background:"#4f46e5",border:"2px solid white",color:"white",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(79,70,229,.4)"}}>
+                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x=".5" y=".5" width="8" height="3" rx="1" stroke="white" strokeWidth=".9"/><rect x=".5" y="5" width="3.5" height="3.5" rx="1" stroke="white" strokeWidth=".9"/><rect x="5" y="5" width="3.5" height="3.5" rx="1" stroke="white" strokeWidth=".9"/></svg>
+                  </button>}
                   {/* Attachment indicators */}
                   {(n.img||n.notes)&&<div style={{position:"absolute",bottom:4,right:6,display:"flex",gap:3,alignItems:"center"}}>
                     {n.img&&<svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{opacity:.5}}><rect x=".5" y=".5" width="10" height="10" rx="2" stroke={c.accent} strokeWidth="1"/><circle cx="3.5" cy="3.5" r="1" fill={c.accent}/><path d="M1 8l2.5-2.5 2 2L7 6l3 3" stroke={c.accent} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -607,6 +613,25 @@ export default function SitemapPage(){
                 <div className="flex gap-1.5">
                   <button onClick={()=>uploadNodeImage(selectedNode.id)} className="flex-1 text-xs text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-lg py-1.5 font-semibold transition-colors">{selectedNode.img?"Replace":"Upload"}</button>
                   {selectedNode.img&&<button onClick={()=>updateNode(selectedNode.id,{img:undefined})} className="text-xs text-red-500 bg-red-50 hover:bg-red-100 rounded-lg px-2.5 py-1.5 font-semibold transition-colors">✕</button>}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Wireframe</label>
+                {wireframes.length>0&&<select value={selectedNode.wireframeId||""} onChange={e=>updateNode(selectedNode.id,{wireframeId:e.target.value||undefined})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 mb-1.5">
+                  <option value="">No wireframe linked</option>
+                  {wireframes.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>}
+                {wireframes.length===0&&<p className="text-xs text-gray-400 mb-1.5">No wireframes yet</p>}
+                <div className="flex gap-1.5">
+                  {selectedNode.wireframeId&&<button onClick={()=>window.location.href=`/wireframe?id=${selectedNode.wireframeId}&fromSitemap=${meta?.id}`} className="flex-1 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-1.5 font-semibold transition-colors">Open →</button>}
+                  {selectedNode.wireframeId&&<button onClick={()=>updateNode(selectedNode.id,{wireframeId:undefined})} className="text-xs text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded-lg px-2.5 py-1.5 font-semibold transition-colors">✕</button>}
+                  {!selectedNode.wireframeId&&<button onClick={()=>{
+                    const newId=uid(); const pageId=uid(); const newMeta={id:newId,name:selectedNode.label,createdAt:ts(),updatedAt:ts()}
+                    localStorage.setItem(`lsk-wire-${newId}`,JSON.stringify({pages:[{id:pageId,name:"Page 1",elements:[]}]}))
+                    const idx=JSON.parse(localStorage.getItem("lsk-wire-index")||"[]"); idx.unshift(newMeta); localStorage.setItem("lsk-wire-index",JSON.stringify(idx))
+                    setWireframes(idx); updateNode(selectedNode.id,{wireframeId:newId})
+                    window.location.href=`/wireframe?id=${newId}&fromSitemap=${meta?.id}`
+                  }} className="flex-1 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg py-1.5 font-semibold transition-colors">+ Create Wireframe</button>}
                 </div>
               </div>
               <div className="mb-4">

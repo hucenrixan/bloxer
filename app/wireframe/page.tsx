@@ -238,6 +238,7 @@ export default function WireframePage() {
   const [showFrameMenu, setShowFrameMenu] = useState(false)
   const [tool, setTool] = useState<"select"|"pencil">("select")
   const [liveStroke, setLiveStroke] = useState<{x:number;y:number}[]>([])
+  const [fromSitemapId, setFromSitemapId] = useState<string|null>(null)
 
   const canvasRef = useRef<HTMLDivElement>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>|null>(null)
@@ -265,7 +266,7 @@ export default function WireframePage() {
   const snp = useCallback((v:number)=>snapRef.current?Math.round(v/8)*8:v,[])
 
   useEffect(()=>{ if(view==="dash") setProjects(listWires()) },[view])
-  useEffect(()=>{ const id=new URLSearchParams(window.location.search).get("id"); if(id) openProject(id) },[])
+  useEffect(()=>{ const p=new URLSearchParams(window.location.search); const id=p.get("id"); if(id) openProject(id); const s=p.get("fromSitemap"); if(s) setFromSitemapId(s) },[])
 
   const scheduleSave = useCallback((m:WireMeta,ps:WirePage[])=>{
     setSaveStatus("unsaved")
@@ -596,10 +597,17 @@ export default function WireframePage() {
 
       {/* Top bar */}
       <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0 z-20">
-        <button onClick={()=>{setView("dash");window.history.replaceState(null,"","/wireframe")}} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors text-sm">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Wireframes
-        </button>
+        {fromSitemapId?(
+          <button onClick={()=>window.location.href=`/sitemap-view?id=${fromSitemapId}`} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-semibold">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Sitemap
+          </button>
+        ):(
+          <button onClick={()=>{setView("dash");window.history.replaceState(null,"","/wireframe")}} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors text-sm">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Wireframes
+          </button>
+        )}
         <div className="w-px h-5 bg-gray-200"/>
         {editingName?(
           <input autoFocus value={editNameVal} onChange={e=>setEditNameVal(e.target.value)} onBlur={()=>{renameMeta(editNameVal);setEditingName(false)}} onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape"){renameMeta(editNameVal);setEditingName(false)}}} className="font-semibold text-gray-900 text-sm border border-indigo-300 rounded-lg px-2 py-0.5 outline-none focus:ring-2 focus:ring-indigo-100"/>
