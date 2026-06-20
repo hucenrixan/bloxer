@@ -292,6 +292,29 @@ export default function Dashboard() {
           })}
         </div>
 
+        {/* ── Planning Tools ── */}
+        <div className="mb-8">
+          <h2 className="text-base font-bold text-gray-900 mb-3">Planning Tools</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <a href="/wireframe" className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 hover:shadow-md hover:border-indigo-200 transition-all group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl" style={{ background:"linear-gradient(135deg,#e0e7ff,#c7d2fe)" }}>⬚</div>
+              <div>
+                <p className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">Wireframe Builder</p>
+                <p className="text-xs text-gray-500 mt-0.5">Plan page layouts with blueprint-style blocks</p>
+              </div>
+              <svg className="ml-auto text-gray-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </a>
+            <a href="/sitemap-view" className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 hover:shadow-md hover:border-purple-200 transition-all group">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl" style={{ background:"linear-gradient(135deg,#ede9fe,#ddd6fe)" }}>🗺</div>
+              <div>
+                <p className="font-bold text-gray-900 group-hover:text-purple-700 transition-colors">Sitemap Builder</p>
+                <p className="text-xs text-gray-500 mt-0.5">Map your site's page hierarchy and flow</p>
+              </div>
+              <svg className="ml-auto text-gray-300 group-hover:text-purple-400 transition-colors flex-shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+
         {/* ── Section heading ── */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
