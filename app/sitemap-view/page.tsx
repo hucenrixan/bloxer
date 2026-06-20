@@ -354,6 +354,8 @@ export default function SitemapPage(){
   return(
     <div className="h-screen flex flex-col" style={{userSelect:"none"}}>
       <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0 z-20">
+        <a href="/" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors flex-shrink-0" title="Home" style={{background:"linear-gradient(135deg,#ede9fe,#ddd6fe)"}}><svg width="14" height="14" viewBox="0 0 40 40" fill="none"><rect x="5" y="3" width="30" height="11" rx="3" fill="#7c3aed"/><rect x="5" y="17" width="13" height="20" rx="3" fill="#7c3aed"/><rect x="22" y="17" width="13" height="20" rx="3" fill="#7c3aed"/></svg></a>
+        <div className="w-px h-5 bg-gray-200"/>
         <button onClick={()=>{setView("dash");window.history.replaceState(null,"","/sitemap-view")}} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors text-sm"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>Sitemaps</button>
         <div className="w-px h-5 bg-gray-200"/>
         {editingName?(

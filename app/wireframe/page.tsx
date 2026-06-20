@@ -597,6 +597,8 @@ export default function WireframePage() {
 
       {/* Top bar */}
       <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-2 flex-shrink-0 z-20">
+        <a href="/" className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors flex-shrink-0" title="Home" style={{background:"linear-gradient(135deg,#e0e7ff,#c7d2fe)"}}><svg width="14" height="14" viewBox="0 0 40 40" fill="none"><rect x="5" y="3" width="30" height="11" rx="3" fill="#4338ca"/><rect x="5" y="17" width="13" height="20" rx="3" fill="#4338ca"/><rect x="22" y="17" width="13" height="20" rx="3" fill="#4338ca"/></svg></a>
+        <div className="w-px h-5 bg-gray-200"/>
         {fromSitemapId?(
           <button onClick={()=>window.location.href=`/sitemap-view?id=${fromSitemapId}`} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-semibold">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
