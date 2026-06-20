@@ -128,6 +128,9 @@ export default function SitemapPage(){
   const [connectMode,setConnectMode]=useState(false)
   const [connectFrom,setConnectFrom]=useState<string|null>(null)
   const [selectedEdgeId,setSelectedEdgeId]=useState<string|null>(null)
+  const [undoStack,setUndoStack]=useState<{nodes:SiteNode[];edges:SiteEdge[]}[]>([])
+  const [redoStack,setRedoStack]=useState<{nodes:SiteNode[];edges:SiteEdge[]}[]>([])
+  const [pinnedNotes,setPinnedNotes]=useState<Set<string>>(new Set())
 
   // Drag reparent
   const [dragNode,setDragNode]=useState<string|null>(null)
@@ -165,13 +168,13 @@ export default function SitemapPage(){
   function createProject(){ if(!newName.trim()) return; const m:SitemapMeta={id:uid(),name:newName.trim(),createdAt:ts(),updatedAt:ts()}; const home:SiteNode={id:uid(),label:"Home",type:"home",url:"/",parentId:null,order:0}; persistMap(m,[home],[]); setShowNew(false); setNewName(""); openProject(m.id) }
   function renameMeta(name:string){ if(!meta||!name.trim()) return; const m={...meta,name:name.trim()}; setMeta(m); scheduleSave(m,nodes,strokesRef.current) }
 
-  function mutate(ns:SiteNode[]){ setNodes(ns); if(meta) scheduleSave(meta,ns,strokesRef.current,edgesRef.current) }
+  function mutate(ns:SiteNode[],skipUndo=false){ if(!skipUndo){setUndoStack(u=>[...u.slice(-29),{nodes:nodesRef.current,edges:edgesRef.current}]);setRedoStack([])} setNodes(ns); if(meta) scheduleSave(meta,ns,strokesRef.current,edgesRef.current) }
   function mutateStrokes(ss:SiteStroke[]){ setStrokes(ss); if(meta) scheduleSave(meta,nodesRef.current,ss,edgesRef.current) }
-  function mutateEdges(es:SiteEdge[]){ setEdges(es); if(meta) scheduleSave(meta,nodesRef.current,strokesRef.current,es) }
+  function mutateEdges(es:SiteEdge[],skipUndo=false){ if(!skipUndo){setUndoStack(u=>[...u.slice(-29),{nodes:nodesRef.current,edges:edgesRef.current}]);setRedoStack([])} setEdges(es); if(meta) scheduleSave(meta,nodesRef.current,strokesRef.current,es) }
   function addChild(parentId:string){ const order=nodes.filter(n=>n.parentId===parentId).length; const node:SiteNode={id:uid(),label:"New Page",type:"page",url:"",parentId,order}; mutate([...nodes,node]); setSelectedId(node.id); setTimeout(()=>{setEditingId(node.id);setEditLabel("New Page")},60) }
   function addRoot(){ const order=nodes.filter(n=>n.parentId===null).length; const node:SiteNode={id:uid(),label:"New Page",type:"page",url:"",parentId:null,order}; mutate([...nodes,node]); setSelectedId(node.id); setTimeout(()=>{setEditingId(node.id);setEditLabel("New Page")},60) }
-  function deleteNode(id:string){ function desc(pid:string):string[]{ return[pid,...nodes.filter(n=>n.parentId===pid).flatMap(c=>desc(c.id))] }; const del=new Set(desc(id)); const newNodes=nodes.filter(n=>!del.has(n.id)); const newEdges=edgesRef.current.filter(e=>!del.has(e.from)&&!del.has(e.to)); setNodes(newNodes); setEdges(newEdges); if(meta) scheduleSave(meta,newNodes,strokesRef.current,newEdges); if(selectedId&&del.has(selectedId)) setSelectedId(null) }
-  function updateNode(id:string,patch:Partial<SiteNode>){ mutate(nodes.map(n=>n.id===id?{...n,...patch}:n)) }
+  function deleteNode(id:string){ function desc(pid:string):string[]{ return[pid,...nodes.filter(n=>n.parentId===pid).flatMap(c=>desc(c.id))] }; const del=new Set(desc(id)); const newNodes=nodes.filter(n=>!del.has(n.id)); const newEdges=edgesRef.current.filter(e=>!del.has(e.from)&&!del.has(e.to)); setUndoStack(u=>[...u.slice(-29),{nodes,edges:edgesRef.current}]); setRedoStack([]); setNodes(newNodes); setEdges(newEdges); if(meta) scheduleSave(meta,newNodes,strokesRef.current,newEdges); if(selectedId&&del.has(selectedId)) setSelectedId(null) }
+  function updateNode(id:string,patch:Partial<SiteNode>,skipUndo=false){ mutate(nodes.map(n=>n.id===id?{...n,...patch}:n),skipUndo) }
   function commitEdit(){ if(editingId&&editLabel.trim()) updateNode(editingId,{label:editLabel.trim()}); setEditingId(null) }
 
   function uploadNodeImage(id:string){
@@ -289,7 +292,11 @@ export default function SitemapPage(){
 
   function onWheel(e:React.WheelEvent){ e.preventDefault(); const f=e.deltaY>0?.92:1.08; const nz=Math.min(4,Math.max(0.15,zoom*f)); const rect=canvasRef.current?.getBoundingClientRect(); if(rect){const mx=e.clientX-rect.left,my=e.clientY-rect.top; setPan(p=>({x:mx-(mx-p.x)*(nz/zoom),y:my-(my-p.y)*(nz/zoom)}))}; setZoom(nz) }
 
-  useEffect(()=>{ const onKey=(e:KeyboardEvent)=>{ const tag=(e.target as HTMLElement).tagName; if(tag==="INPUT"||tag==="TEXTAREA") return; if(e.key==="Escape"){ setSelectedId(null); setConnectMode(false); setConnectFrom(null); return }; if(e.key==="Delete"||e.key==="Backspace"){ if(selectedEdgeId){ e.preventDefault(); const ne=edgesRef.current.filter(ed=>ed.id!==selectedEdgeId); setEdges(ne); if(meta) scheduleSave(meta,nodesRef.current,strokesRef.current,ne); setSelectedEdgeId(null); return }; if(selectedId){ e.preventDefault(); deleteNode(selectedId) } } }; window.addEventListener("keydown",onKey); return()=>window.removeEventListener("keydown",onKey) },[selectedId,selectedEdgeId,nodes,meta])
+  useEffect(()=>{ const onKey=(e:KeyboardEvent)=>{ const tag=(e.target as HTMLElement).tagName; if(tag==="INPUT"||tag==="TEXTAREA") return
+    if((e.metaKey||e.ctrlKey)&&e.key==="z"){ e.preventDefault(); if(e.shiftKey){ setRedoStack(r=>{ if(!r.length) return r; const next=r[0]; setUndoStack(u=>[...u,{nodes:nodesRef.current,edges:edgesRef.current}]); setNodes(next.nodes); setEdges(next.edges); if(meta) scheduleSave(meta,next.nodes,strokesRef.current,next.edges); return r.slice(1) }) }else{ setUndoStack(u=>{ if(!u.length) return u; const prev=u[u.length-1]; setRedoStack(r=>[{nodes:nodesRef.current,edges:edgesRef.current},...r]); setNodes(prev.nodes); setEdges(prev.edges); if(meta) scheduleSave(meta,prev.nodes,strokesRef.current,prev.edges); return u.slice(0,-1) }) }; return }
+    if(e.key==="Escape"){ setSelectedId(null); setConnectMode(false); setConnectFrom(null); return }
+    if(e.key==="Delete"||e.key==="Backspace"){ if(selectedEdgeId){ e.preventDefault(); const ne=edgesRef.current.filter(ed=>ed.id!==selectedEdgeId); setEdges(ne); if(meta) scheduleSave(meta,nodesRef.current,strokesRef.current,ne); setSelectedEdgeId(null); return }; if(selectedId){ e.preventDefault(); deleteNode(selectedId) } }
+  }; window.addEventListener("keydown",onKey); return()=>window.removeEventListener("keydown",onKey) },[selectedId,selectedEdgeId,nodes,meta])
 
   // ── Dashboard ──────────────────────────────────────────────────────────────
   if(view==="dash") return(
@@ -364,6 +371,10 @@ export default function SitemapPage(){
           <button onClick={()=>{setEditNameVal(meta?.name??"");setEditingName(true)}} className="font-semibold text-gray-900 text-sm hover:text-violet-600 transition-colors" title="Click to rename">{meta?.name}</button>
         )}
         <span className="text-xs text-gray-400">{saveStatus==="saved"?"✓ Saved":"Saving…"}</span>
+        <div className="flex items-center gap-0.5">
+          <button onClick={()=>setUndoStack(u=>{ if(!u.length) return u; const prev=u[u.length-1]; setRedoStack(r=>[{nodes:nodesRef.current,edges:edgesRef.current},...r]); setNodes(prev.nodes); setEdges(prev.edges); if(meta) scheduleSave(meta,prev.nodes,strokesRef.current,prev.edges); return u.slice(0,-1) })} disabled={undoStack.length===0} title="Undo (⌘Z)" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5.5H8a3.5 3.5 0 0 1 0 7H5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 2.5L2.5 5.5L5 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+          <button onClick={()=>setRedoStack(r=>{ if(!r.length) return r; const next=r[0]; setUndoStack(u=>[...u,{nodes:nodesRef.current,edges:edgesRef.current}]); setNodes(next.nodes); setEdges(next.edges); if(meta) scheduleSave(meta,next.nodes,strokesRef.current,next.edges); return r.slice(1) })} disabled={redoStack.length===0} title="Redo (⌘⇧Z)" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11.5 5.5H6a3.5 3.5 0 0 0 0 7H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 2.5L11.5 5.5L9 8.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
+        </div>
         <div className="flex-1"/>
         {/* Type legend */}
         <div className="hidden md:flex items-center gap-3 mr-2">
@@ -558,21 +569,28 @@ export default function SitemapPage(){
               )
             })}
 
-            {/* Node detail cards — only shown when node is selected, floats right */}
+            {/* Node detail cards — shown when selected OR pinned */}
             {nodes.map(n=>{
               const pos=positions.get(n.id); if(!pos) return null
               if(!n.notes&&!n.img) return null
-              if(selectedId!==n.id) return null
+              const isPinned=pinnedNotes.has(n.id)
+              if(selectedId!==n.id&&!isPinned) return null
               const c=TYPE_CONF[n.type]
               return(
                 <div key={`detail-${n.id}`} data-node="1"
-                  style={{position:"absolute",left:pos.x+NW+14,top:pos.y,width:188,background:"white",border:`1.5px solid #7c3aed`,borderRadius:10,overflow:"hidden",boxShadow:"0 4px 20px rgba(124,58,237,.18)",zIndex:10}}
+                  style={{position:"absolute",left:pos.x+NW+14,top:pos.y,width:188,background:"white",border:`1.5px solid ${isPinned?"#f59e0b":"#7c3aed"}`,borderRadius:10,overflow:"hidden",boxShadow:`0 4px 20px rgba(${isPinned?"245,158,11":"124,58,237"},.18)`,zIndex:10}}
                   onClick={e=>e.stopPropagation()}
                   onPointerDown={e=>e.stopPropagation()}
                 >
-                  <div style={{height:3,background:c.border}}/>
+                  <div style={{height:3,background:isPinned?"#f59e0b":c.border}}/>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 8px 0"}}>
+                    <span style={{fontSize:10,fontWeight:600,color:isPinned?"#b45309":"#7c3aed",letterSpacing:"0.05em"}}>{n.label}</span>
+                    <button data-node="1" onClick={e=>{e.stopPropagation();setPinnedNotes(p=>{const s=new Set(p);s.has(n.id)?s.delete(n.id):s.add(n.id);return s})}} title={isPinned?"Unpin note":"Pin note — keep visible"} style={{width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:4,background:isPinned?"#fef3c7":"transparent",border:"none",cursor:"pointer",color:isPinned?"#b45309":"#94a3b8"}}>
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill={isPinned?"currentColor":"none"}><path d="M5.5 1L6.8 4H10L7.4 5.9l1 3.1L5.5 7.3 2.6 9l1-3.1L1 4h3.2z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
                   {n.img&&<img src={n.img} style={{width:"100%",display:"block",maxHeight:140,objectFit:"cover"}}/>}
-                  {n.notes&&<div style={{padding:"7px 10px",fontSize:11,color:"#475569",lineHeight:1.5,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.notes}</div>}
+                  {n.notes&&<div style={{padding:"5px 10px 8px",fontSize:11,color:"#475569",lineHeight:1.5,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{n.notes}</div>}
                 </div>
               )
             })}
@@ -602,9 +620,9 @@ export default function SitemapPage(){
                 <h3 className="font-semibold text-gray-900">Properties</h3>
                 <button onClick={()=>setSelectedId(null)} className="text-gray-400 hover:text-gray-700"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg></button>
               </div>
-              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Label</label><input value={selectedNode.label} onChange={e=>updateNode(selectedNode.id,{label:e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50"/></div>
-              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">URL</label><input value={selectedNode.url} onChange={e=>updateNode(selectedNode.id,{url:e.target.value})} placeholder="/page" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50"/></div>
-              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Notes</label><textarea value={selectedNode.notes||""} onChange={e=>updateNode(selectedNode.id,{notes:e.target.value})} placeholder="Add notes, description…" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 resize-none"/></div>
+              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Label</label><input value={selectedNode.label} onChange={e=>updateNode(selectedNode.id,{label:e.target.value},true)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50"/></div>
+              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">URL</label><input value={selectedNode.url} onChange={e=>updateNode(selectedNode.id,{url:e.target.value},true)} placeholder="/page" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50"/></div>
+              <div className="mb-3"><label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Notes</label><textarea value={selectedNode.notes||""} onChange={e=>updateNode(selectedNode.id,{notes:e.target.value},true)} placeholder="Add notes, description…" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 resize-none"/></div>
               <div className="mb-4">
                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 block">Screenshot</label>
                 {selectedNode.img?(
